@@ -63,7 +63,11 @@ You should add and commit the `Gemfile.lock` file once Jekyll is working for you
 If your `Gemfile.lock` changes, `make` will fail and ask you to commit the changes.
 This is so that if dependencies change, you can back them out if they break things.
 
---
+<br />
+
+---
+
+<br />
 
 # Files used here
 
