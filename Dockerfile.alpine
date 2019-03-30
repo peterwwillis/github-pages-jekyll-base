@@ -17,11 +17,11 @@ RUN apk update && apk add --no-cache --virtual .build_deps \
     bundle install && \
   apk del .build_deps
 
-RUN mkdir -p /usr/src/app
+RUN mkdir -p /usr/src/app /home/jekyll /_site
 WORKDIR /usr/src/app
 
-RUN groupadd -rg 1000 jekyll && \
-    useradd -rg jekyll -u 1000 -d /home/jekyll jekyll && \
+RUN addgroup -g 1000 -S jekyll && \
+    adduser -u 1000 -S jekyll -G jekyll && \
     chown jekyll:jekyll /home/jekyll /usr/src/app /_site
 
 
