@@ -7,7 +7,7 @@
 .PHONY: clean
 
 DEP_FILES = .ruby-version Gemfile pages-versions.json
-EXTRA_FILES = .envrc Gemfile.lock
+EXTRA_FILES = .envrc Gemfile.lock rvm.sh
 
 all: check-deps
 	@echo "Run 'make docker' to build and run a Docker container to run 'jekyll serve' in."
@@ -33,14 +33,15 @@ build: check-deps generate jekyll.build
 serve: check-deps generate jekyll.serve
 
 
-clean: clean-deps
-	bundle exec jekyll clean || true
+clean:
+
+clean.all: clean-version-files clean-docker clean-local clean-ruby-deps clean-ruby-rvm
 
 clean-version-files:
 	rm -f $(DEP_FILES) $(EXTRA_FILES)
 
-clean.all: clean-deps clean-version-files clean-docker
-	bundle exec jekyll clean || true
+clean-local:
+	. $(PWD)/envrc && bundle exec jekyll clean || true
 
 fail-if-gemfile-changed:
 	DIFFOUT=$$(git diff Gemfile.lock) ; \
@@ -50,10 +51,12 @@ fail-if-gemfile-changed:
 	fi
 
 jekyll.build:
+	. $(PWD)/envrc && \
 	bundle exec jekyll doctor -t && \
 	bundle exec jekyll build -t
 
 jekyll.serve:
+	. $(PWD)/envrc && \
 	bundle exec jekyll doctor -t && \
 	bundle exec jekyll serve -t
 
@@ -71,6 +74,7 @@ check-deps: $(DEP_FILES)
 # 
 # Read more about 'bundle install' weirdness at https://bundler.io/bundle_install.html
 update-deps: update-ruby-rvm
+	. $(PWD)/envrc && \
 	if [ -z "$$SKIP_BUNDLE_UPDATE" ] ; then \
 		if [ ! -d ".bundle" ] ; then \
 			if [ "x$$BUNDLE_DEPLOYMENT" = "x1" ] ; then \
@@ -85,7 +89,7 @@ update-deps: update-ruby-rvm
 # To use the latest gems we need a recent ruby. This will install it using rvm.
 # If the system name that rvm detects is "unknown", will disable use of
 # autolibs and compile from scratch.
-update-ruby-rvm:
+update-ruby-rvm: .ruby-version
 	set -x ; \
 	if [ ! -r $(PWD)/.ruby-version ] ; then echo "ERROR: Need $(PWD)/.ruby-version" ; exit 1 ; fi ; \
 	RUBY_WANT_VER=$$(cat $(PWD)/.ruby-version) ; \
@@ -109,7 +113,7 @@ update-ruby-rvm:
 clean-ruby-rvm:
 	rm -rf rvm/
 
-clean-deps:
+clean-ruby-deps:
 	rm -rf vendor/ .bundle
 
 clean-docker:
