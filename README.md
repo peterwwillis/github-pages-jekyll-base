@@ -40,7 +40,8 @@ environment used to build the Ruby dependencies for Jekyll.
 First off, there are 2 Dockerfiles you can use, both of which are based on Dockerfiles
 from the GitHub Pages gem repository. By default we use one based on Ubuntu, but you
 can also opt for the Alpine image. Currently only the Ubuntu-based one pins the version
-of Ruby.
+of Ruby. Unfortunately the Ubuntu image is about a gigabyte, but the Alpine version
+comes out to 176MB. Aside from the Ruby version they are both equivalent.
 
 The Docker images copy the Gemfile and then call 'bundle install' to set up Jekyll.
 If your dependencies change, the Docker image will automatically rebuild.
