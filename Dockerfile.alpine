@@ -3,12 +3,16 @@ FROM ruby:alpine
 RUN apk update && apk add --no-cache \
   git
 
+COPY Gemfile .
+
 # one step to exclude .build_deps from docker cache
 RUN apk update && apk add --no-cache --virtual .build_deps \
     make \
     build-base && \
-    gem install --no-document github-pages && \
+    bundle install && \
   apk del .build_deps
+
+#    gem install --no-document github-pages && \
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app

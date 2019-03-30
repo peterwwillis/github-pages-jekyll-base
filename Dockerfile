@@ -8,7 +8,9 @@ RUN apt-get update \
     make \
     nodejs
 
-RUN gem install --no-document github-pages
+COPY Gemfile .
+
+RUN bundle install
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app

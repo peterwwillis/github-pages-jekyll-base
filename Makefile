@@ -6,11 +6,18 @@
 
 .PHONY: clean
 
+VERSION_FILES = .ruby-version Gemfile Gemfile.lock pages-versions.json .envrc 
+
 all: check-deps
 	@echo "Run 'make docker' to build and run a Docker container to run 'jekyll serve' in."
 	@echo ""
 	@echo "Run 'make build' to build a local version of Ruby and build and run 'jekyll build'."
 	@echo "Run 'make serve' to use that locally-built Ruby/Jekyll."
+	@echo ""
+	@echo "By default this repository pins the versions of GitHub Pages' dependencies, but GitHub"
+	@echo "may update them which may break things. To update your ruby dependencies, run:"
+	@echo "  rm -f Gemfile"
+	@echo "  make Gemfile"
 	@echo ""
 	@echo "If you have problems, try removing the 'Gemfile.lock' file and trying again."
 
@@ -20,15 +27,15 @@ export
 
 generate: update-deps fail-if-gemfile-changed
 
-build: check-deps generate jekyll-build
+build: check-deps generate jekyll.build
 
-serve: check-deps generate jekyll-serve
+serve: check-deps generate jekyll.serve
 
 
 clean:
 	bundle exec jekyll clean
 
-clean-all: clean-deps
+clean.all: clean-deps
 	bundle exec jekyll clean
 
 fail-if-gemfile-changed:
@@ -38,15 +45,15 @@ fail-if-gemfile-changed:
 		exit 1 ; \
 	fi
 
-jekyll-build:
+jekyll.build:
 	bundle exec jekyll doctor -t && \
 	bundle exec jekyll build -t
 
-jekyll-serve:
+jekyll.serve:
 	bundle exec jekyll doctor -t && \
 	bundle exec jekyll serve -t
 
-check-deps:
+check-deps: Gemfile .ruby-version
 	@if [ ! -r envrc ] ; then \
 		echo "" ; \
 		echo "Error: please copy envrc.sample to envrc and edit it to match your settings." ; \
@@ -75,7 +82,6 @@ update-deps: update-ruby-rvm
 # If the system name that rvm detects is "unknown", will disable use of
 # autolibs and compile from scratch.
 update-ruby-rvm:
-	if [ ! x"$$USE_RVM" = x"1" ] ; then exit 0 ; fi ; \
 	set -x ; \
 	if [ ! -r $(PWD)/.ruby-version ] ; then echo "ERROR: Need $(PWD)/.ruby-version" ; exit 1 ; fi ; \
 	RUBY_WANT_VER=$$(cat $(PWD)/.ruby-version) ; \
@@ -102,9 +108,37 @@ clean-ruby-rvm:
 clean-deps:
 	rm -rf vendor/ .bundle
 
-docker.build:
-	docker build -t my-github-pages:latest -f Dockerfile.alpine .
+clean-docker:
+	docker image rm my-github-pages:latest || true
 
-docker: docker.build
-	docker run --rm -v "$(PWD)":/usr/src/app -p "4000:4000" my-github-pages:latest
+docker: docker.serve
 
+docker.build.container:
+	docker build -t my-github-pages:latest --build-arg RUBYVERSION=$$(cat .ruby-version) -f Dockerfile .
+# Note that the alpine Dockerfile does not pin the ruby version currently
+#	docker build -t my-github-pages:latest -f Dockerfile.alpine .
+
+docker.build: docker.build.container
+	docker run -it --rm -v "$(PWD)":/usr/src/app -p "4000:4000" my-github-pages:latest ./jekyll.sh build -t -H 0.0.0.0 -P 4000
+
+docker.serve: docker.build.container 
+	docker run -it --rm -v "$(PWD)":/usr/src/app -p "4000:4000" my-github-pages:latest ./jekyll.sh serve -t -H 0.0.0.0 -P 4000
+
+# Download the current pages-versions from GitHub and generate a new
+# Gemfile based on them. You can commit this to your repository after
+# generating it.
+clean-gemfile:
+	rm -f pages-versions.json Gemfile
+pages-versions.json:
+	@curl -sLo pages-versions.json https://pages.github.com/versions.json
+Gemfile: pages-versions.json
+	@echo "source 'https://rubygems.org'" > Gemfile
+	@cat pages-versions.json | \
+		sed -e "s/[{}]//g; s/,/\n/g;s/:/ /g; s/\"/'/g" | \
+		sed -e "s/^/gem /; s/' '/', '= /; s/$$/ , :group => :jekyll_plugins/" | \
+		grep -v "^gem 'ruby'" \
+		>> Gemfile
+
+# Overwrite ruby version with what's in GitHub Pages repo
+.ruby-version:
+	curl -sLo .ruby-version https://raw.githubusercontent.com/github/pages-gem/master/.ruby-version

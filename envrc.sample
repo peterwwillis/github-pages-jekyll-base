@@ -12,9 +12,6 @@ export JEKYLL_GITHUB_TOKEN=<insert your GitHub personal access token here>
 #fi
 #export PATH
 
-# Set this to 1 to build the version of Ruby we need with RVM
-USE_RVM=0
-
 # If we don't have the right version of ruby available, look for it in the
 # rvm directory. Make should create it if necessary.
 if [ -d rvm -a -r .ruby-version ] ; then

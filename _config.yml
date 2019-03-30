@@ -1,10 +1,10 @@
 
 # Use this to load one of the GitHub Pages themes here:
 #   https://pages.github.com/themes/
-#theme: jekyll-theme-architect
+theme: minima
 
 # Or you can load any Jekyll theme from its GitHub repository:
-remote_theme: Trybnetic/minimalist
+#remote_theme: Trybnetic/minimalist
 
 repository: peterwwillis/github-pages-jekyll-base
 url: https://peterwwillis.github.io
