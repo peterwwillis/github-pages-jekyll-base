@@ -45,6 +45,9 @@ of Ruby.
 The Docker images copy the Gemfile and then call 'bundle install' to set up Jekyll.
 If your dependencies change, the Docker image will automatically rebuild.
 
+The generated site pages as well as any vendor-specific Ruby files are kept in the container
+with the `-d /_site` option to Jekyll. You can also map these to a Docker volume.
+
 You can also modify the 'jekyll.sh' script to perform other actions before it runs `jekyll`
 inside the container.
 
@@ -63,6 +66,10 @@ This is so that if dependencies change, you can back them out if they break thin
 --
 
 # Files used here
+
+Some of the files here can be automatically regenerated; run `make clean.all` to remove
+them, and subsequent uses of `make docker` or `make serve` should automatically
+download new versions. You can then commit the updates to your repository.
 
 ## `Makefile`
 This config instructs `make` on how to build and run Jekyll. Read the file to find more

@@ -6,7 +6,8 @@
 
 .PHONY: clean
 
-VERSION_FILES = .ruby-version Gemfile Gemfile.lock pages-versions.json .envrc 
+DEP_FILES = .ruby-version Gemfile pages-versions.json
+EXTRA_FILES = .envrc Gemfile.lock
 
 all: check-deps
 	@echo "Run 'make docker' to build and run a Docker container to run 'jekyll serve' in."
@@ -33,10 +34,13 @@ serve: check-deps generate jekyll.serve
 
 
 clean:
-	bundle exec jekyll clean
+	bundle exec jekyll clean || true
 
-clean.all: clean-deps
-	bundle exec jekyll clean
+clean-version-files:
+	rm -f $(DEP_FILES) $(EXTRA_FILES)
+
+clean.all: clean-deps clean-version-files
+	bundle exec jekyll clean || true
 
 fail-if-gemfile-changed:
 	DIFFOUT=$$(git diff Gemfile.lock) ; \
@@ -53,7 +57,7 @@ jekyll.serve:
 	bundle exec jekyll doctor -t && \
 	bundle exec jekyll serve -t
 
-check-deps: Gemfile .ruby-version
+check-deps: $(DEP_FILES)
 	@if [ ! -r envrc ] ; then \
 		echo "" ; \
 		echo "Error: please copy envrc.sample to envrc and edit it to match your settings." ; \
@@ -113,16 +117,22 @@ clean-docker:
 
 docker: docker.serve
 
-docker.build.container:
+docker.build.container: check-deps
 	docker build -t my-github-pages:latest --build-arg RUBYVERSION=$$(cat .ruby-version) -f Dockerfile .
 # Note that the alpine Dockerfile does not pin the ruby version currently
 #	docker build -t my-github-pages:latest -f Dockerfile.alpine .
 
+DOCKER_VOLUMES = -v "$(PWD)":/usr/src/app
+#DOCKER_VOLUMES = -v "$(PWD)":/usr/src/app -v "my-gh-pages:/usr/src/app/vendor:rw" -v "my-gh-pages:/usr/src/app/_site:rw"
+
 docker.build: docker.build.container
-	docker run -it --rm -v "$(PWD)":/usr/src/app -p "4000:4000" my-github-pages:latest ./jekyll.sh build -t -H 0.0.0.0 -P 4000
+	docker run -it --name gh-jekyll --rm $(DOCKER_VOLUMES) -p "4000:4000" my-github-pages:latest ./jekyll.sh build -d /_site -t -H 0.0.0.0 -P 4000
 
 docker.serve: docker.build.container 
-	docker run -it --rm -v "$(PWD)":/usr/src/app -p "4000:4000" my-github-pages:latest ./jekyll.sh serve -t -H 0.0.0.0 -P 4000
+	docker run -it --name gh-jekyll --rm $(DOCKER_VOLUMES) -p "4000:4000" my-github-pages:latest ./jekyll.sh serve -d /_site -t -H 0.0.0.0 -P 4000
+
+docker.attach:
+	docker exec -it $$(docker ps -f 'name=gh-jekyll' -q) /bin/sh
 
 # Download the current pages-versions from GitHub and generate a new
 # Gemfile based on them. You can commit this to your repository after
